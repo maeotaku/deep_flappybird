@@ -16,6 +16,7 @@ class Agent():
         self.NONE = None
         self.Y_UP = 0
         self.Y_NONE = 1
+        self.max_pipes = 0
         self.model = self.load(path)
         if self.model is None:
             self.model = Policy(number_of_frames).to(device)
