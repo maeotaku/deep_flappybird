@@ -62,6 +62,7 @@ class GameLearner():
         while(True):
             #housekeeping for new episode
             self.episode_no+=1
+            max_passed_pipes = 0
             passed_pipes = 0
             done = False
             episode_states =    []
@@ -80,13 +81,15 @@ class GameLearner():
                     x = pre_process(x, input_shape, crop_size)
                     stacked_frames += [ x ]
                     if stacked_cont == number_of_frames:
-                        #Preprocessor.save_img(x, "")
+                        Preprocessor.save_img(x, "")
                         stacked_frames = np.array(stacked_frames).reshape(stacked_frame_shape)
                         prob, log_prob, action = self.agent.pick_action(stacked_frames)
                         action = self.agent.translate_o_to_action(action)
                         reward = self.p.act(action)
-                        if reward > 0: #also end episode in order to train with good moves
+                        if reward > 0:
                             passed_pipes+=1
+                            if max_passed_pipes < passed_pipes:
+                                max_passed_pipes = passed_pipes
                         episode_states += [stacked_frames]
                         episode_rewards += [reward]
                         episode_log_probs += [log_prob]
@@ -100,8 +103,8 @@ class GameLearner():
             episode_rewards = torch.tensor(episode_rewards)
             episode_log_probs = torch.tensor(episode_log_probs, requires_grad=True)
             loss = self.agent.train(episode_log_probs, episode_rewards)
-            print(episode_actions)
-            print("Episode=" + str(self.episode_no) + " Reward=" + str(total_reward) + " Loss=" + str(loss.item()) + " Pipes=" + str(passed_pipes))
+            #print(episode_actions)
+            print("Episode=" + str(self.episode_no) + " Reward=" + str(total_reward) + " Loss=" + str(loss.item()) + " Pipes=" + str(max_passed_pipes))
 
 
 learner = GameLearner(GameEnv(), Agent(number_of_frames, device), render)
