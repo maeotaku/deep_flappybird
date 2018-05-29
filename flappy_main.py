@@ -14,7 +14,9 @@ import numpy as np
 from agent import *
 from preprocessor import *
 
-render = True
+
+model_filename = "model.pytorch"
+render = False
 crop_size = 407
 side_size = 64
 input_shape = (side_size,side_size)
@@ -24,6 +26,7 @@ input_size = input_shape[0] * input_shape[1]
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 eps = np.finfo(np.float32).eps.item()
+save_every_episodes = 50
 
 class GameLearner():
 
@@ -47,10 +50,10 @@ class GameLearner():
         self.p.init()
         self.p.reset_game()
         reward = 0
+        max_passed_pipes = 0
         while(True):
             #housekeeping for new episode
             self.episode_no+=1
-            max_passed_pipes = 0
             passed_pipes = 0
             done = False
             episode_states =    []
@@ -86,6 +89,8 @@ class GameLearner():
                         stacked_cont = 0
 
             self.p.reset_game()
+            if self.episode_no % save_every_episodes == 0:
+                self.agent.save(model_filename)
             episode_rewards = self._discount_rewards(np.array(episode_rewards))
             total_reward = np.sum(episode_rewards)
             episode_rewards = torch.tensor(episode_rewards)
@@ -95,5 +100,5 @@ class GameLearner():
             print("Episode=" + str(self.episode_no) + " Reward=" + str(total_reward) + " Loss=" + str(loss.item()) + " Pipes=" + str(max_passed_pipes))
 
 
-learner = GameLearner(GameEnv(), Agent(number_of_frames, device), render)
+learner = GameLearner(GameEnv(), Agent(number_of_frames, device, model_filename), render)
 learner.reinforced_learning()
