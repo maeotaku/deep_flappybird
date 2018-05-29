@@ -33,18 +33,6 @@ class GameLearner():
         self.episode_no  = 0
 
     def _discount_rewards(self, episode_rewards):
-        #print(r)
-        '''
-        discounted_r = np.zeros_like(episode_rewards)
-        running_add = 0.0
-        for t in reversed(range(0, episode_rewards.size)):
-            #if episode_rewards[t] != 0: running_add = 0 # reset the sum, since this was a game boundary (pong specific!
-            running_add = running_add * 0.99 + episode_rewards[t]
-            discounted_r[t] = running_add
-            #print(running_add)
-        return discounted_r
-        '''
-
         R = 0
         rewards = []
         for r in reversed(range(len(episode_rewards))):
@@ -81,7 +69,7 @@ class GameLearner():
                     x = pre_process(x, input_shape, crop_size)
                     stacked_frames += [ x ]
                     if stacked_cont == number_of_frames:
-                        Preprocessor.save_img(x, "")
+                        #Preprocessor.save_img(x, "")
                         stacked_frames = np.array(stacked_frames).reshape(stacked_frame_shape)
                         prob, log_prob, action = self.agent.pick_action(stacked_frames)
                         action = self.agent.translate_o_to_action(action)
