@@ -1,5 +1,8 @@
 #from __future__ import print_function
 #import argparse
+import random
+from datetime import datetime
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,7 +21,7 @@ from preprocessor import *
 model_filename = "model.pytorch"
 render = True
 crop_size = 407
-side_size = 64
+side_size = 32
 input_shape = (side_size,side_size)
 number_of_frames = 2
 stacked_frame_shape = (1, number_of_frames, side_size, side_size)
@@ -36,11 +39,25 @@ class GameLearner():
         self.episode_no  = 0
 
     def _discount_rewards(self, episode_rewards):
+        '''
+        running = []
+        for i in range(len(episode_rewards)):
+            if (episode_rewards[i] != 0):
+                episode_rewards[running] = episode_rewards[i]
+                running = []
+            else:
+                running += [ i ]
+        '''
+        episode_rewards[episode_rewards==0]=0.1
+        episode_rewards[episode_rewards==-5]=-1
+        #print(episode_rewards)
+
         R = 0
         rewards = []
         for r in reversed(range(len(episode_rewards))):
-            R = r + 0.99 * R
+            R = r + 0.7 * R
             rewards.insert(0, R)
+
         episode_rewards = np.array(rewards)
         episode_rewards = (episode_rewards - episode_rewards.mean()) / (episode_rewards.std() + eps)
         return episode_rewards
@@ -51,6 +68,7 @@ class GameLearner():
         self.p.reset_game()
         reward = 0
         #self.agent.max_pipes = 0
+        cont_img = 0
         while(True):
             #housekeeping for new episode
             self.episode_no+=1
@@ -63,6 +81,9 @@ class GameLearner():
             episode_actions = []
             stacked_cont = 0
             stacked_frames = []
+            random.seed(datetime.now())
+            k = random.randint(0, 40) #a different start position for the policy
+            frames = 0
             while not(done): #check episode is not done
                 stacked_cont+=1
                 if self.p.game_over(): #a bad sequence of moves, done
@@ -72,8 +93,12 @@ class GameLearner():
                     x = pre_process(x, input_shape, crop_size)
                     stacked_frames += [ x ]
                     if stacked_cont == number_of_frames:
-                        #Preprocessor.save_img(x, "")
+                        #Preprocessor.save_img(x, str(cont_img) + ".jpg" )
+                        cont_img+=1
                         stacked_frames = np.array(stacked_frames).reshape(stacked_frame_shape)
+                        #if frames <= k:
+                        #    reward = self.p.act(random.choice([self.agent.NONE])) #, self.agent.UP]))
+                        #else:
                         prob, log_prob, action = self.agent.pick_action(stacked_frames)
                         action = self.agent.translate_o_to_action(action)
                         reward = self.p.act(action)
@@ -86,12 +111,14 @@ class GameLearner():
                         episode_log_probs += [log_prob]
                         episode_probs += [prob]
                         episode_actions += [action]
+                        frames+=1
                         stacked_cont = 0
 
             self.p.reset_game()
             if self.episode_no % save_every_episodes == 0:
                 self.agent.save(model_filename)
             episode_rewards = self._discount_rewards(np.array(episode_rewards))
+            #episode_rewards[episode_rewards == -5] = -1
             total_reward = np.sum(episode_rewards)
             episode_rewards = torch.tensor(episode_rewards)
             episode_log_probs = torch.tensor(episode_log_probs, requires_grad=True)
@@ -100,5 +127,5 @@ class GameLearner():
             print("Episode=" + str(self.episode_no) + " Reward=" + str(total_reward) + " Loss=" + str(loss.item()) + " Current Pipes=" + str(passed_pipes) + " Max Pipes=" + str(self.agent.max_pipes))
 
 
-learner = GameLearner(GameEnv(), Agent(number_of_frames, device, model_filename), render)
+learner = GameLearner(GameEnv(pipe_gap=150), Agent(number_of_frames, device, model_filename), render)
 learner.reinforced_learning()

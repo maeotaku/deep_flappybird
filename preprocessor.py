@@ -22,8 +22,8 @@ class Preprocessor():
 
     @classmethod
     def to_binary(cls, img):
-        #img[img <= 50] = 0
-        #img[img > 50] = 255
+        img[img > 75] = 255
+        img[img < 65] = 255
         return img
 
     @classmethod
@@ -32,13 +32,17 @@ class Preprocessor():
 
     @classmethod
     def normalize(cls, x):
-        x_float = np.zeros(input_shape, dtype=np.float)
+        x_float = np.empty_like(x, dtype=np.float)
         x_float = x / 255.0
+        #print(x_float)
         return x_float
 
 def pre_process(img, input_shape, crop_size):
     img = Preprocessor.crop(img, crop_size)
     img = Preprocessor.to_gray(img)
-    img = Preprocessor.resize(img, input_shape)
     img = Preprocessor.to_binary(img)
+    #Preprocessor.save_img(img, "" )
+    img = Preprocessor.resize(img, input_shape)
+    img = Preprocessor.normalize(img)
+
     return img.reshape(input_shape)#.ravel()

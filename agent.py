@@ -20,8 +20,8 @@ class Agent():
         self.model = self.load(path)
         if self.model is None:
             self.model = Policy(number_of_frames).to(device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-2)
-        #self.optimizer = optim.SGD(self.model.parameters(), lr=0.085, momentum=0.5)
+        #self.optimizer = optim.Adam(self.model.parameters(), lr=1e-2)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=0.085, momentum=0.5)
 
     def load(self, filename):
         if not filename is None and os.path.exists(filename):
@@ -58,8 +58,10 @@ class Agent():
         return self.NONE
 
     def train(self, log_probs, rewards):
+        self.optimizer.zero_grad()
         rewards_applied = -log_probs.float() * rewards.float()
         loss = rewards_applied.sum()
         loss.backward()
+
         self.optimizer.step()
         return loss
